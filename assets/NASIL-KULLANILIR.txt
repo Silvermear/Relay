@@ -1,0 +1,12 @@
+Cümbüş — Özel Ses ve Arka Plan
+
+1) Zil sesi (ringtone)
+   - Kendi ses dosyanı şuraya koy: assets/ringtone.mp3
+   - MP3, WAV veya OGG olabilir; config.js içinde yolu değiştirebilirsin.
+
+2) Arama arka plan resmi
+   - Kendi resmini şuraya koy: assets/call-bg.jpg
+   - JPG, PNG veya WEBP olabilir; config.js içinde yolu değiştirebilirsin.
+   - Hem "Bağlanıyor..." hem "Bağlandı" ekranında aynı resim görünür.
+
+3) Yol değiştirmek için config.js dosyasını düzenle.

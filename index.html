@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Cümbüş</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- Sol şerit: Logo -->
+    <div class="server-bar">
+      <div class="logo-container" title="Lobi">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="cumbus-logo">
+          <!-- Arka plan -->
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          
+          <!-- Sohbet balonu -->
+          <path d="M 25 20 Q 75 20 75 55 Q 75 70 55 70 L 35 70 L 28 80 L 32 70 Q 25 70 25 55 Q 25 20 25 20" fill="#e0a458" stroke="#f2c089" stroke-width="2"/>
+          
+          <!-- Müzik notası -->
+          <g transform="translate(50, 45)">
+            <!-- Gövde -->
+            <circle cx="0" cy="12" r="4" fill="#1a1a2e"/>
+            <!-- Sap -->
+            <line x1="4" y1="12" x2="4" y2="-8" stroke="#1a1a2e" stroke-width="2"/>
+            <!-- Flama -->
+            <path d="M 4 -8 Q 8 -6 8 -2 Q 8 2 4 2" fill="#1a1a2e"/>
+          </g>
+          
+          <!-- Komik gözler (logo kişiliği) -->
+          <circle cx="45" cy="40" r="2.5" fill="#1a1a2e"/>
+          <circle cx="55" cy="40" r="2.5" fill="#1a1a2e"/>
+          
+          <!-- Komik ağız (üzülmüş) -->
+          <path d="M 45 52 Q 50 50 55 52" stroke="#1a1a2e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Sol panel: Direkt Mesajlar listesi -->
+    <div class="channel-bar">
+
+      <div class="search-box" id="search-box">
+        <input type="text" placeholder="Ara">
+      </div>
+
+      <div class="section-label dm-label">Direkt Mesajlar</div>
+      <div class="empty-list" id="dm-empty">Henüz mesajlaşman yok.</div>
+      <div id="dm-list"></div>
+
+      <!-- Kullanıcı profil çubuğu -->
+      <div class="user-bar">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Yükleniyor...</div>
+          <div class="user-status">Çevrimiçi</div>
+        </div>
+        <div class="user-controls">
+          <div class="control-icon" id="mic-btn" title="Mikrofon">🎤</div>
+          <div class="control-icon" id="headphone-btn" title="Kulaklık">🎧</div>
+          <div class="control-icon" id="settings-btn" title="Ayarlar">⚙️</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ana içerik alanı: Arkadaşlar görünümü -->
+    <div class="main-content" id="friends-area">
+
+      <div class="content-header">
+        <span class="header-title">Arkadaşlar</span>
+        <div class="friends-tabs">
+          <div class="tab active" data-view="online">Çevrim içi</div>
+        </div>
+      </div>
+
+      <!-- Görünüm: Çevrim içi (varsayılan) -->
+      <div class="view-panel active" id="view-online">
+        <div class="section-label">Çevrim içi — 0</div>
+        <div class="empty-list">Şu anda çevrim içi arkadaşın yok.</div>
+      </div>
+
+      <!-- Görünüm: Tümü -->
+      <div class="view-panel" id="view-all">
+        <div class="section-label">Tüm Arkadaşlar — 0</div>
+        <div class="empty-list">Henüz hiç arkadaşın yok.</div>
+      </div>
+
+      <!-- Görünüm: Arkadaş Ekle -->
+      <div class="view-panel" id="view-add">
+        <div class="add-friend-box">
+          <div class="add-friend-title">Arkadaş Ekle</div>
+          <div class="add-friend-desc">Bir Cümbüş kullanıcı adı girerek arkadaşlık isteği gönderebilirsin.</div>
+          <input type="text" class="add-friend-input" id="add-friend-input" placeholder="Kullanıcı adı gir">
+          <button class="add-friend-btn" id="add-friend-btn">İstek Gönder</button>
+          <div class="message" id="add-friend-message"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ana içerik alanı: Sohbet görünümü -->
+    <div class="main-content hidden" id="chat-area">
+
+      <div class="content-header chat-header">
+        <div class="chat-header-left">
+          <div class="back-btn" id="back-to-friends" title="Arkadaşlara dön">←</div>
+          <div class="chat-avatar" id="chat-avatar">?</div>
+          <span class="header-title" id="chat-username">Kullanıcı</span>
+        </div>
+        <div class="chat-header-right">
+          <div class="control-icon" id="chat-call-btn" title="Sesli Ara">📞</div>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages"></div>
+
+      <div class="message-input-container">
+        <input type="text" id="chat-input" class="message-input" placeholder="Mesaj yaz...">
+        <button id="chat-send-btn" class="message-send-btn">Gönder</button>
+      </div>
+
+    </div>
+
+    <!-- Gelen Arama Modal'ı -->
+    <div class="call-modal hidden" id="call-modal">
+      <div class="call-bg-image" id="call-modal-bg"></div>
+      <div class="call-modal-content">
+        <div class="call-modal-avatar" id="call-modal-avatar">?</div>
+        <div class="call-modal-name" id="call-modal-name">Kullanıcı</div>
+        <div class="call-modal-text">Seni arıyor...</div>
+        
+        <div class="call-modal-buttons">
+          <button id="call-accept-btn" class="call-accept">Kabul Et</button>
+          <button id="call-decline-btn" class="call-decline">Reddet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aktif Arama Ekranı -->
+    <div class="call-area hidden" id="call-area">
+
+      <div class="call-bg-image" id="call-area-bg"></div>
+
+      <!-- Dekoratif ses dalgası arka planı -->
+      <div class="call-bg-waves">
+        <div class="wave-ring wave-ring-1"></div>
+        <div class="wave-ring wave-ring-2"></div>
+        <div class="wave-ring wave-ring-3"></div>
+      </div>
+
+      <div class="call-container">
+        <div class="call-avatar-wrapper">
+          <div class="call-avatar-large" id="call-avatar-large">?</div>
+        </div>
+        <div class="call-name" id="call-name">Kullanıcı</div>
+        <div class="call-status-row">
+          <div class="call-status" id="call-status">Bağlanıyor...</div>
+          <div class="call-remote-mute hidden" id="call-remote-mute" title="Karşı taraf susturdu">🔇 Sessiz</div>
+        </div>
+        <div class="call-timer hidden" id="call-timer">00:00</div>
+
+        <!-- Ortadaki kapatma butonu -->
+        <div class="call-end-container">
+          <button id="call-end-btn" class="call-end-btn" title="Aramayı Bitir">📞</button>
+        </div>
+      </div>
+
+      <!-- Sol altta cihaz seçimi + susturma -->
+      <div class="call-mini-controls">
+        <div class="call-control-group">
+          <button type="button" class="call-mini-btn" id="call-mic-btn" title="Mikrofon seç">🎤</button>
+          <div class="device-menu hidden" id="mic-device-menu"></div>
+        </div>
+        <div class="call-control-group">
+          <button type="button" class="call-mini-btn" id="call-speaker-btn" title="Hoparlör / kulaklık seç">🎧</button>
+          <div class="device-menu hidden" id="speaker-device-menu"></div>
+        </div>
+        <button type="button" class="call-mini-btn" id="call-mute-btn" title="Sustur">🔇</button>
+      </div>
+
+    </div>
+
+    <!-- Ringtone sesleri (gizli) -->
+    <audio id="ringtone-outgoing" src="arama-yapiyor.mp3" loop preload="auto"></audio>
+    <audio id="ringtone-incoming" src="arama-geliyor.mp3" loop preload="auto"></audio>
+
+    <!-- Karşı taraftan gelen gerçek ses (WebRTC) -->
+    <audio id="remote-audio" autoplay></audio>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
