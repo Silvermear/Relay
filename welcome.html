@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Cümbüş - Hoş Geldin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: #0d0d0f;
+      color: #e8e6e3;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .welcome-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      position: relative;
+    }
+
+    .slides-wrapper {
+      width: 480px;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .slide {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      animation: fadeSlide 0.4s ease;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-icon {
+      width: 140px;
+      height: 140px;
+    }
+
+    .slide-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #e0a458;
+    }
+
+    .slide-text {
+      font-size: 15px;
+      color: #a8a6a3;
+      line-height: 1.6;
+      max-width: 380px;
+    }
+
+    .slide-text .highlight {
+      color: #f2c089;
+      font-weight: 600;
+    }
+
+    .dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 32px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #2a2a2d;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      background-color: #e0a458;
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+      justify-content: center;
+    }
+
+    .nav-btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 24px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-skip {
+      background-color: transparent;
+      color: #8b8a87;
+    }
+
+    .btn-skip:hover {
+      color: #e8e6e3;
+    }
+
+    .btn-next {
+      background-color: #e0a458;
+      color: #0d0d0f;
+    }
+
+    .btn-next:hover {
+      background-color: #f2c089;
+      transform: translateY(-2px);
+    }
+
+    .btn-start {
+      background-color: #e0a458;
+      color: #0d0d0f;
+      padding: 14px 36px;
+      font-size: 15px;
+    }
+
+    .btn-start:hover {
+      background-color: #f2c089;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(224, 164, 88, 0.4);
+    }
+
+    .btn-feedback {
+      background-color: #232325;
+      color: #e8e6e3;
+      padding: 12px 28px;
+    }
+
+    .btn-feedback:hover {
+      background-color: #2a2a2d;
+    }
+
+    .feedback-icon-wrapper {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .feedback-tag {
+      font-size: 11px;
+      color: #6f6e6b;
+      background-color: #1c1c1f;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="welcome-container">
+    <div class="slides-wrapper">
+
+      <!-- Slayt 1: Hoş Geldin -->
+      <div class="slide active" data-slide="1">
+        <svg class="slide-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          <path d="M 25 20 Q 75 20 75 55 Q 75 70 55 70 L 35 70 L 28 80 L 32 70 Q 25 70 25 55 Q 25 20 25 20" fill="#e0a458" stroke="#f2c089" stroke-width="2"/>
+          <g transform="translate(50, 45)">
+            <circle cx="0" cy="12" r="4" fill="#1a1a2e"/>
+            <line x1="4" y1="12" x2="4" y2="-8" stroke="#1a1a2e" stroke-width="2"/>
+            <path d="M 4 -8 Q 8 -6 8 -2 Q 8 2 4 2" fill="#1a1a2e"/>
+          </g>
+          <circle cx="45" cy="40" r="2.5" fill="#1a1a2e"/>
+          <circle cx="55" cy="40" r="2.5" fill="#1a1a2e"/>
+          <path d="M 45 50 Q 50 54 55 50" stroke="#1a1a2e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="slide-title">Cümbüş'e Hoş Geldin! 🎉</div>
+        <div class="slide-text">
+          Burası, arkadaşlarınla bir araya gelip <span class="highlight">sohbet edebileceğin</span>, 
+          küçük ve samimi bir yer. Sade tutmaya çalıştık, umarız beğenirsin.
+        </div>
+      </div>
+
+      <!-- Slayt 2: Mesajlaşma -->
+      <div class="slide" data-slide="2">
+        <svg class="slide-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          <rect x="20" y="28" width="45" height="32" rx="10" fill="#232325"/>
+          <path d="M 30 60 L 30 68 L 40 60 Z" fill="#232325"/>
+          <rect x="35" y="42" width="45" height="32" rx="10" fill="#e0a458"/>
+          <path d="M 70 74 L 70 82 L 80 74 Z" fill="#e0a458"/>
+          <circle cx="30" cy="44" r="2.5" fill="#8b8a87"/>
+          <circle cx="40" cy="44" r="2.5" fill="#8b8a87"/>
+          <circle cx="50" cy="44" r="2.5" fill="#8b8a87"/>
+        </svg>
+        <div class="slide-title">Anlık Sohbet Et</div>
+        <div class="slide-text">
+          Arkadaş ekle, mesaj gönder — <span class="highlight">saniyeler içinde</span> karşı tarafa ulaşsın. 
+          Bekleme yok, gecikme yok.
+        </div>
+      </div>
+
+      <!-- Slayt 3: Sesli Sohbet -->
+      <div class="slide" data-slide="3">
+        <svg class="slide-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          <circle cx="50" cy="50" r="16" fill="#e0a458"/>
+          <path d="M 44 42 L 44 52 Q 44 58 50 58 Q 56 58 56 52 L 56 42 Q 56 36 50 36 Q 44 36 44 42 Z" fill="#1a1a2e"/>
+          <path d="M 38 50 Q 38 62 50 62 Q 62 62 62 50" stroke="#1a1a2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <line x1="50" y1="62" x2="50" y2="68" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="28" stroke="#e0a458" stroke-width="1.5" fill="none" opacity="0.4"/>
+          <circle cx="50" cy="50" r="35" stroke="#e0a458" stroke-width="1" fill="none" opacity="0.2"/>
+        </svg>
+        <div class="slide-title">Sesle Konuş</div>
+        <div class="slide-text">
+          Oyun oynarken, otururken, ne yaparken olursan ol — bir tık uzağında 
+          <span class="highlight">sesli arama</span> var. Mikrofon ve kulaklık seçimini de sen yaparsın.
+        </div>
+      </div>
+
+      <!-- Slayt 4: Sorun Bildirme -->
+      <div class="slide" data-slide="4">
+        <svg class="slide-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          <circle cx="50" cy="46" r="26" fill="#232325"/>
+          <rect x="47" y="32" width="6" height="20" rx="3" fill="#e0a458"/>
+          <circle cx="50" cy="58" r="3.5" fill="#e0a458"/>
+          <path d="M 30 78 Q 50 68 70 78" stroke="#e0a458" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+        <div class="slide-title">Bir Sorun mu Var?</div>
+        <div class="slide-text">
+          Bu daha çok yeni, küçük aksaklıklar olabilir. Bir şey ters giderse veya 
+          aklına bir öneri gelirse, <span class="highlight">bize haber ver</span> — 
+          ne yaşadığını kısaca anlatan bir açıklama (varsa ekran görüntüsüyle) her zaman yardımcı olur.
+        </div>
+        <button class="nav-btn btn-feedback" id="feedback-btn">Bize Yaz</button>
+        <div class="feedback-icon-wrapper">
+          <span class="feedback-tag">📧 cumbusdogrulama@gmail.com</span>
+        </div>
+      </div>
+
+      <!-- Slayt 5: Başla -->
+      <div class="slide" data-slide="5">
+        <svg class="slide-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#1a1a2e" rx="20"/>
+          <path d="M 25 20 Q 75 20 75 55 Q 75 70 55 70 L 35 70 L 28 80 L 32 70 Q 25 70 25 55 Q 25 20 25 20" fill="#e0a458" stroke="#f2c089" stroke-width="2"/>
+          <g transform="translate(50, 45)">
+            <circle cx="0" cy="12" r="4" fill="#1a1a2e"/>
+            <line x1="4" y1="12" x2="4" y2="-8" stroke="#1a1a2e" stroke-width="2"/>
+            <path d="M 4 -8 Q 8 -6 8 -2 Q 8 2 4 2" fill="#1a1a2e"/>
+          </g>
+          <path d="M 40 38 Q 42 35 45 38" stroke="#1a1a2e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M 55 38 Q 58 35 60 38" stroke="#1a1a2e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M 42 48 Q 50 55 58 48" stroke="#1a1a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="slide-title">Hazırsın! 🚀</div>
+        <div class="slide-text">
+          Bu kadar basit. Şimdi arkadaşlarını ekleyip sohbete başlayabilirsin.
+        </div>
+        <button class="nav-btn btn-start" id="start-btn">Başlayalım</button>
+      </div>
+
+      <div class="dots" id="dots-container">
+        <div class="dot active" data-goto="1"></div>
+        <div class="dot" data-goto="2"></div>
+        <div class="dot" data-goto="3"></div>
+        <div class="dot" data-goto="4"></div>
+        <div class="dot" data-goto="5"></div>
+      </div>
+
+      <div class="nav-buttons" id="nav-buttons">
+        <button class="nav-btn btn-skip" id="skip-btn">Atla</button>
+        <button class="nav-btn btn-next" id="next-btn">İleri</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const { shell } = require('electron');
+
+    let currentSlide = 1;
+    const totalSlides = 5;
+
+    function goToSlide(slideNum) {
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
+
+      document.querySelector('[data-slide="' + slideNum + '"]').classList.add('active');
+      document.querySelector('[data-goto="' + slideNum + '"]').classList.add('active');
+
+      currentSlide = slideNum;
+
+      // Son slaytta ileri/atla butonlarını gizle
+      const navButtons = document.getElementById('nav-buttons');
+      if (slideNum === totalSlides) {
+        navButtons.style.display = 'none';
+      } else {
+        navButtons.style.display = 'flex';
+      }
+    }
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+      if (currentSlide < totalSlides) {
+        goToSlide(currentSlide + 1);
+      }
+    });
+
+    document.getElementById('skip-btn').addEventListener('click', () => {
+      goToSlide(totalSlides);
+    });
+
+    document.querySelectorAll('.dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        goToSlide(parseInt(dot.getAttribute('data-goto')));
+      });
+    });
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('feedback-btn').addEventListener('click', () => {
+      const to = 'cumbusdogrulama@gmail.com';
+      const subject = encodeURIComponent('Cümbüş - Geri Bildirim / Hata Bildirimi');
+      const body = encodeURIComponent(
+        'Merhaba,\n\n' +
+        'Yaşadığım durumu buraya kısaca anlatıyorum:\n\n' +
+        '[Buraya yaz: ne yapmaya çalışıyordun, ne oldu, beklediğin neydi]\n\n' +
+        '(Varsa ekran görüntüsünü bu e-postaya ekleyebilirsin)\n\n' +
+        'Teşekkürler!'
+      );
+
+      // Gmail web compose ekranını, "Kime" alanı dolu şekilde tarayıcıda aç
+      const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + subject + '&body=' + body;
+      shell.openExternal(gmailUrl);
+    });
+  </script>
+
+</body>
+</html>

@@ -17,11 +17,17 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.2"
+    "@supabase/supabase-js": "^2.108.2",
+    "electron-updater": "^6.8.9"
   },
   "build": {
     "appId": "com.cumbus.app",
     "productName": "Cümbüş",
+    "publish": {
+      "provider": "github",
+      "owner": "Silvermear",
+      "repo": "cumbus-"
+    },
     "win": {
       "target": "nsis",
       "icon": "icon.ico"

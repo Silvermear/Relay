@@ -34,6 +34,52 @@ let micMuted = false;
 let selectedMicId = null;
 let selectedSpeakerId = null;
 
+// Sol alttaki genel (global) mikrofon/kulaklık varsayılan durumu
+let globalMicOff = false;
+let globalSpeakerOff = false;
+
+// Grup ile ilgili durumlar
+let userFriendsList = [];
+let userGroups = [];
+let activeGroup = null;
+let groupChatSubscription = null;
+let groupInviteSubscription = null;
+let groupCallSubscription = null;
+let activeGroupCallId = null;
+let groupCallMuted = false;
+
+// ===== SOL ALTTAKİ GENEL MİKROFON / KULAKLIK KONTROLÜ =====
+
+const sidebarMicBtn = document.getElementById('mic-btn');
+const sidebarHeadphoneBtn = document.getElementById('headphone-btn');
+const sidebarSettingsBtn = document.getElementById('settings-btn');
+
+sidebarMicBtn.addEventListener('click', () => {
+  globalMicOff = !globalMicOff;
+  sidebarMicBtn.classList.toggle('muted', globalMicOff);
+  sidebarMicBtn.textContent = globalMicOff ? '🔇' : '🎤';
+
+  if (activeCall) {
+    micMuted = globalMicOff;
+    document.getElementById('call-mute-btn').classList.toggle('muted', micMuted);
+    applyMicMuteToStream();
+    broadcastMuteState();
+  }
+});
+
+sidebarHeadphoneBtn.addEventListener('click', () => {
+  globalSpeakerOff = !globalSpeakerOff;
+  sidebarHeadphoneBtn.classList.toggle('muted', globalSpeakerOff);
+  sidebarHeadphoneBtn.textContent = globalSpeakerOff ? '🔇' : '🎧';
+
+  const remoteAudio = document.getElementById('remote-audio');
+  remoteAudio.muted = globalSpeakerOff;
+});
+
+sidebarSettingsBtn.addEventListener('click', () => {
+  alert('⚙️ Ayarlar yakında eklenecek!');
+});
+
 // ===== WEBRTC (gerçek ses bağlantısı) =====
 
 let peerConnection = null;
@@ -51,21 +97,30 @@ function getSignalChannelName(callerId, receiverId) {
   return 'webrtc-' + [callerId, receiverId].sort().join('-');
 }
 
+async function getLocalStreamWithDevice(deviceId) {
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+
+  try {
+    const constraints = {
+      audio: deviceId ? { deviceId: { exact: deviceId } } : true
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    applyMicMuteToStream(stream);
+    return stream;
+  } catch (error) {
+    console.error('Mikrofona erişilemedi:', error);
+    return null;
+  }
+}
+
 async function startWebRTC(isCaller) {
   await stopWebRTC();
 
-  const constraints = {
-    audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true
-  };
-
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia(constraints);
-  } catch (error) {
-    console.warn('Mikrofona erişilemedi:', error);
-    return;
-  }
-
-  applyMicMuteToStream();
+  localStream = await getLocalStreamWithDevice(selectedMicId);
+  if (!localStream) return;
 
   peerConnection = new RTCPeerConnection(ICE_SERVERS);
 
@@ -77,6 +132,7 @@ async function startWebRTC(isCaller) {
     const remoteAudio = document.getElementById('remote-audio');
     if (remoteAudio.srcObject !== event.streams[0]) {
       remoteAudio.srcObject = event.streams[0];
+      remoteAudio.muted = globalSpeakerOff;
       applySpeakerToRemoteAudio();
     }
   };
@@ -132,6 +188,10 @@ async function startWebRTC(isCaller) {
 }
 
 async function stopWebRTC() {
+  if (signalChannel) {
+    supabase.removeChannel(signalChannel);
+    signalChannel = null;
+  }
   if (peerConnection) {
     peerConnection.close();
     peerConnection = null;
@@ -140,45 +200,56 @@ async function stopWebRTC() {
     localStream.getTracks().forEach(track => track.stop());
     localStream = null;
   }
-  if (signalChannel) {
-    supabase.removeChannel(signalChannel);
-    signalChannel = null;
-  }
   const remoteAudio = document.getElementById('remote-audio');
   remoteAudio.srcObject = null;
 }
 
-function applyMicMuteToStream() {
-  if (!localStream) return;
-  localStream.getAudioTracks().forEach(track => {
+function applyMicMuteToStream(stream) {
+  if (!stream) stream = localStream;
+  if (!stream) return;
+  stream.getAudioTracks().forEach(track => {
     track.enabled = !micMuted;
   });
 }
 
 function applySpeakerToRemoteAudio() {
   const remoteAudio = document.getElementById('remote-audio');
-  if (selectedSpeakerId && remoteAudio.setSinkId) {
+  if (!selectedSpeakerId) return;
+  if (remoteAudio.setSinkId) {
     remoteAudio.setSinkId(selectedSpeakerId).catch(err => console.warn('Hoparlör ayarlanamadı:', err));
   }
 }
 
 async function switchMicrophone(deviceId) {
   selectedMicId = deviceId;
-  if (!peerConnection || !localStream) return;
 
-  try {
-    const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
+  const newStream = await getLocalStreamWithDevice(deviceId);
+  if (!newStream) {
+    console.warn('Yeni mikrofon stream\'i alınamadı, eski stream kullanılacak');
+    return;
+  }
+
+  if (peerConnection) {
     const newTrack = newStream.getAudioTracks()[0];
     const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) {
-      await sender.replaceTrack(newTrack);
+      try {
+        await sender.replaceTrack(newTrack);
+      } catch (error) {
+        console.warn('WebRTC track değiştirilemedi:', error);
+      }
+    } else {
+      newStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, newStream);
+      });
     }
-    localStream.getAudioTracks().forEach(t => t.stop());
-    localStream = newStream;
-    applyMicMuteToStream();
-  } catch (error) {
-    console.warn('Mikrofon değiştirilemedi:', error);
   }
+
+  if (localStream && localStream !== newStream) {
+    localStream.getTracks().forEach(t => t.stop());
+  }
+  localStream = newStream;
+  applyMicMuteToStream();
 }
 
 // ===== RINGTONE (kendi ses dosyalarımız) =====
@@ -256,9 +327,15 @@ function updateRemoteMuteIndicator(isMuted) {
 
 // ===== CİHAZ TARAMA (Mikrofon / Kulaklık) =====
 
-async function getAudioDevices() {
+let cachedDevices = { mics: [], speakers: [] };
+let deviceCacheValid = false;
+
+async function getAudioDevices(forceRefresh) {
   try {
-    // İzin almak için önce mikrofona erişim isteriz (etiketlerin görünmesi için gerekli)
+    if (deviceCacheValid && !forceRefresh) {
+      return cachedDevices;
+    }
+
     await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       stream.getTracks().forEach(track => track.stop());
     }).catch(() => {});
@@ -266,12 +343,19 @@ async function getAudioDevices() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === 'audioinput');
     const speakers = devices.filter(d => d.kind === 'audiooutput');
-    return { mics, speakers };
+
+    cachedDevices = { mics, speakers };
+    deviceCacheValid = true;
+    return cachedDevices;
   } catch (error) {
     console.warn('Cihazlar taranamadı:', error);
     return { mics: [], speakers: [] };
   }
 }
+
+navigator.mediaDevices.addEventListener('devicechange', () => {
+  deviceCacheValid = false;
+});
 
 function closeAllDeviceMenus() {
   document.getElementById('mic-device-menu').classList.add('hidden');
@@ -309,7 +393,7 @@ function renderDeviceMenu(menuEl, devices, selectedId, onSelect, emptyLabel) {
 }
 
 async function setupDeviceMenus() {
-  const { mics, speakers } = await getAudioDevices();
+  const { mics, speakers } = await getAudioDevices(true);
 
   const micMenu = document.getElementById('mic-device-menu');
   const speakerMenu = document.getElementById('speaker-device-menu');
@@ -354,13 +438,16 @@ document.addEventListener('click', () => {
   closeAllDeviceMenus();
 });
 
-// Susturma butonu
 document.getElementById('call-mute-btn').addEventListener('click', (e) => {
   e.stopPropagation();
   micMuted = !micMuted;
   document.getElementById('call-mute-btn').classList.toggle('muted', micMuted);
   applyMicMuteToStream();
   broadcastMuteState();
+
+  globalMicOff = micMuted;
+  sidebarMicBtn.classList.toggle('muted', globalMicOff);
+  sidebarMicBtn.textContent = globalMicOff ? '🔇' : '🎤';
 });
 
 async function loadUserProfile() {
@@ -386,6 +473,9 @@ async function loadUserProfile() {
 
   loadFriendshipsData();
   subscribeToIncomingCalls();
+  await loadGroupsData();
+  subscribeToGroupInvites();
+  subscribeToGroupCallNotifications();
 }
 
 loadUserProfile();
@@ -480,6 +570,8 @@ async function loadFriendshipsData() {
     ...(acceptedAsSender || []).map(f => ({ id: f.friend_id, username: f.profiles.username })),
     ...(acceptedAsReceiver || []).map(f => ({ id: f.user_id, username: f.profiles.username }))
   ];
+
+  userFriendsList = normalizedFriends;
 
   renderFriendsList(normalizedFriends);
   renderOnlineFriendsList(normalizedFriends);
@@ -678,6 +770,7 @@ async function openChat(friendId, friendUsername) {
   activeChatFriend = { id: friendId, username: friendUsername };
 
   document.getElementById('friends-area').classList.add('hidden');
+  document.getElementById('group-chat-area').classList.add('hidden');
   document.getElementById('chat-area').classList.remove('hidden');
 
   document.getElementById('chat-username').textContent = friendUsername;
@@ -699,13 +792,452 @@ document.getElementById('back-to-friends').addEventListener('click', () => {
   activeChatFriend = null;
 });
 
+document.getElementById('back-to-friends-from-group').addEventListener('click', () => {
+  document.getElementById('group-chat-area').classList.add('hidden');
+  document.getElementById('friends-area').classList.remove('hidden');
+
+  if (groupChatSubscription) {
+    supabase.removeChannel(groupChatSubscription);
+    groupChatSubscription = null;
+  }
+  activeGroup = null;
+
+  document.querySelectorAll('.server-group-icon').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+});
+
+// ===== GRUP MANTIGI =====
+
+// Grup Oluştur butonu (sol üstte "+")
+document.getElementById('add-group-btn').addEventListener('click', () => {
+  document.getElementById('group-name-input').value = '';
+  document.getElementById('group-limit-input').value = '0';
+  document.getElementById('create-group-message').textContent = '';
+  document.getElementById('create-group-modal').classList.remove('hidden');
+});
+
+document.getElementById('cancel-group-btn').addEventListener('click', () => {
+  document.getElementById('create-group-modal').classList.add('hidden');
+});
+
+document.getElementById('confirm-create-group-btn').addEventListener('click', async () => {
+  const nameInput = document.getElementById('group-name-input');
+  const limitInput = document.getElementById('group-limit-input');
+  const messageDiv = document.getElementById('create-group-message');
+
+  const name = nameInput.value.trim();
+  let memberLimit = parseInt(limitInput.value, 10);
+  if (isNaN(memberLimit) || memberLimit < 0) memberLimit = 0;
+
+  messageDiv.textContent = '';
+  messageDiv.className = 'message';
+
+  if (!name) {
+    messageDiv.textContent = 'Lütfen bir grup adı gir.';
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  if (!currentUser) return;
+
+  const { data: newGroup, error } = await supabase
+    .from('groups')
+    .insert({ name: name, created_by: currentUser.id, member_limit: memberLimit })
+    .select()
+    .single();
+
+  if (error || !newGroup) {
+    messageDiv.textContent = 'Grup oluşturulamadı: ' + (error ? error.message : 'bilinmeyen hata');
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  // Kendini gruba sahip (owner) olarak ekle
+  const { error: memberError } = await supabase
+    .from('group_members')
+    .insert({ group_id: newGroup.id, user_id: currentUser.id, status: 'accepted', role: 'owner' });
+
+  if (memberError) {
+    messageDiv.textContent = 'Grup oluştu ama üyelik eklenemedi: ' + memberError.message;
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  document.getElementById('create-group-modal').classList.add('hidden');
+  loadGroupsData();
+});
+
+// Kullanıcının gruplarını yükle
+async function loadGroupsData() {
+  if (!currentUser) return;
+
+  const { data: memberships } = await supabase
+    .from('group_members')
+    .select('group_id, role, groups (id, name, created_by, logo_url, member_limit)')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'accepted');
+
+  userGroups = (memberships || [])
+    .filter(m => m.groups)
+    .map(m => ({ ...m.groups, myRole: m.role }));
+
+  renderServerGroupIcons(userGroups);
+}
+
+// Sol şeritte grup ikonları (Lobi'nin altında)
+function renderServerGroupIcons(groups) {
+  const listEl = document.getElementById('server-group-list');
+  listEl.innerHTML = '';
+
+  groups.forEach(group => {
+    const icon = document.createElement('div');
+    icon.className = 'server-group-icon';
+    icon.setAttribute('data-tooltip', group.name);
+    if (group.logo_url) {
+      icon.innerHTML = `<img src="${group.logo_url}" alt="${group.name}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+    } else {
+      icon.textContent = group.name.charAt(0).toUpperCase();
+    }
+    icon.addEventListener('click', () => {
+      openGroupChat(group);
+    });
+    listEl.appendChild(icon);
+  });
+}
+
+// Grup sohbetini aç
+async function openGroupChat(group) {
+  activeGroup = group;
+
+  document.getElementById('friends-area').classList.add('hidden');
+  document.getElementById('chat-area').classList.add('hidden');
+  document.getElementById('group-chat-area').classList.remove('hidden');
+
+  document.getElementById('group-chat-name').textContent = group.name;
+  const chatAvatar = document.getElementById('group-chat-avatar');
+  if (group.logo_url) {
+    chatAvatar.innerHTML = `<img src="${group.logo_url}" alt="${group.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    chatAvatar.textContent = group.name.charAt(0).toUpperCase();
+  }
+
+  document.querySelectorAll('.server-group-icon').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-tooltip') === group.name);
+  });
+  document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+
+  await loadGroupMessages();
+  subscribeToGroupMessages();
+}
+
+// Grup mesajlarını yükle
+async function loadGroupMessages() {
+  if (!activeGroup) return;
+
+  const { data: messages } = await supabase
+    .from('group_messages')
+    .select('*, profiles:sender_id (username)')
+    .eq('group_id', activeGroup.id)
+    .order('created_at', { ascending: true });
+
+  const chatMessages = document.getElementById('group-chat-messages');
+  chatMessages.innerHTML = '';
+
+  if (messages) {
+    messages.forEach(msg => {
+      appendGroupMessageToChat(msg);
+    });
+  }
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Grup mesajını ekrana ekle
+function appendGroupMessageToChat(msg) {
+  const chatMessages = document.getElementById('group-chat-messages');
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-message ' + (msg.sender_id === currentUser.id ? 'sent' : 'received');
+
+  const senderLabel = document.createElement('span');
+  senderLabel.className = 'sender-label';
+  senderLabel.textContent = msg.profiles ? msg.profiles.username : 'Kullanıcı';
+
+  const textNode = document.createTextNode(msg.content);
+
+  bubble.appendChild(senderLabel);
+  bubble.appendChild(textNode);
+  chatMessages.appendChild(bubble);
+}
+
+// Grup mesajlarını gerçek zamanlı dinle
+function subscribeToGroupMessages() {
+  if (groupChatSubscription) {
+    supabase.removeChannel(groupChatSubscription);
+  }
+
+  groupChatSubscription = supabase
+    .channel('group-messages-' + activeGroup.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages' }, async (payload) => {
+      const msg = payload.new;
+      if (!activeGroup || msg.group_id !== activeGroup.id) return;
+
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', msg.sender_id)
+        .single();
+
+      msg.profiles = senderProfile;
+
+      appendGroupMessageToChat(msg);
+      const chatMessages = document.getElementById('group-chat-messages');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    })
+    .subscribe();
+}
+
+// Grup mesajı gönder
+document.getElementById('group-chat-send-btn').addEventListener('click', sendGroupMessage);
+document.getElementById('group-chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    sendGroupMessage();
+  }
+});
+
+async function sendGroupMessage() {
+  const input = document.getElementById('group-chat-input');
+  const content = input.value.trim();
+
+  if (!content || !activeGroup || !currentUser) return;
+
+  const { error } = await supabase
+    .from('group_messages')
+    .insert({
+      group_id: activeGroup.id,
+      sender_id: currentUser.id,
+      content: content
+    });
+
+  if (!error) {
+    input.value = '';
+  }
+}
+
+// ===== ARKADAŞ DAVET ETME =====
+
+document.getElementById('group-invite-btn').addEventListener('click', async () => {
+  if (!activeGroup) return;
+
+  document.getElementById('invite-friend-message').textContent = '';
+  await renderInviteFriendList();
+  document.getElementById('invite-friend-modal').classList.remove('hidden');
+});
+
+document.getElementById('close-invite-modal-btn').addEventListener('click', () => {
+  document.getElementById('invite-friend-modal').classList.add('hidden');
+});
+
+async function renderInviteFriendList() {
+  const listEl = document.getElementById('invite-friend-list');
+  listEl.innerHTML = '';
+
+  if (userFriendsList.length === 0) {
+    listEl.innerHTML = '<div class="empty-list">Davet edebileceğin bir arkadaşın yok.</div>';
+    return;
+  }
+
+  const { data: existingMembers } = await supabase
+    .from('group_members')
+    .select('user_id, status')
+    .eq('group_id', activeGroup.id);
+
+  const existingMap = {};
+  let acceptedCount = 0;
+  (existingMembers || []).forEach(m => {
+    existingMap[m.user_id] = m.status;
+    if (m.status === 'accepted') acceptedCount++;
+  });
+
+  const limitReached = activeGroup.member_limit && activeGroup.member_limit > 0 && acceptedCount >= activeGroup.member_limit;
+
+  if (limitReached) {
+    const warn = document.createElement('div');
+    warn.className = 'message error';
+    warn.textContent = 'Bu grup üye sınırına ulaştı (' + activeGroup.member_limit + '/' + activeGroup.member_limit + ').';
+    listEl.appendChild(warn);
+  }
+
+  userFriendsList.forEach(friend => {
+    const item = document.createElement('div');
+    item.className = 'invite-friend-item';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'friend-avatar';
+    avatar.textContent = friend.username.charAt(0).toUpperCase();
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'friend-name';
+    nameDiv.textContent = friend.username;
+
+    const inviteBtn = document.createElement('button');
+    inviteBtn.className = 'invite-btn';
+
+    const existingStatus = existingMap[friend.id];
+    if (existingStatus === 'accepted') {
+      inviteBtn.textContent = 'Üye';
+      inviteBtn.disabled = true;
+    } else if (existingStatus === 'pending') {
+      inviteBtn.textContent = 'Davet Edildi';
+      inviteBtn.disabled = true;
+    } else if (limitReached) {
+      inviteBtn.textContent = 'Grup Dolu';
+      inviteBtn.disabled = true;
+    } else {
+      inviteBtn.textContent = 'Davet Et';
+      inviteBtn.addEventListener('click', () => inviteFriendToGroup(friend, inviteBtn));
+    }
+
+    item.appendChild(avatar);
+    item.appendChild(nameDiv);
+    item.appendChild(inviteBtn);
+    listEl.appendChild(item);
+  });
+}
+
+async function inviteFriendToGroup(friend, buttonEl) {
+  if (!activeGroup || !currentUser) return;
+
+  const { error } = await supabase
+    .from('group_members')
+    .insert({
+      group_id: activeGroup.id,
+      user_id: friend.id,
+      status: 'pending',
+      invited_by: currentUser.id
+    });
+
+  const messageDiv = document.getElementById('invite-friend-message');
+
+  if (error) {
+    if (error.code === '23505') {
+      // Daha önce reddedilmiş bir davet olabilir, statüyü güncelle
+      const { error: updateError } = await supabase
+        .from('group_members')
+        .update({ status: 'pending', invited_by: currentUser.id })
+        .eq('group_id', activeGroup.id)
+        .eq('user_id', friend.id);
+
+      if (!updateError) {
+        buttonEl.textContent = 'Davet Edildi';
+        buttonEl.disabled = true;
+        messageDiv.textContent = friend.username + ' davet edildi!';
+        messageDiv.classList.add('success');
+        return;
+      }
+    }
+    messageDiv.textContent = 'Davet gönderilemedi: ' + error.message;
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  buttonEl.textContent = 'Davet Edildi';
+  buttonEl.disabled = true;
+  messageDiv.textContent = friend.username + ' davet edildi!';
+  messageDiv.classList.add('success');
+}
+
+// ===== GELEN GRUP DAVETLERİ =====
+
+function subscribeToGroupInvites() {
+  if (!currentUser) return;
+
+  groupInviteSubscription = supabase
+    .channel('group-invites-' + currentUser.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_members' }, async (payload) => {
+      const member = payload.new;
+      if (member.user_id !== currentUser.id || member.status !== 'pending') return;
+
+      const { data: group } = await supabase
+        .from('groups')
+        .select('id, name')
+        .eq('id', member.group_id)
+        .single();
+
+      let inviterName = 'Bir arkadaşın';
+      if (member.invited_by) {
+        const { data: inviterProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', member.invited_by)
+          .single();
+        if (inviterProfile) inviterName = inviterProfile.username;
+      }
+
+      if (group) {
+        showGroupInviteModal(member, group, inviterName);
+      }
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_members' }, async (payload) => {
+      const member = payload.new;
+      if (member.user_id !== currentUser.id || member.status !== 'pending') return;
+
+      const { data: group } = await supabase
+        .from('groups')
+        .select('id, name')
+        .eq('id', member.group_id)
+        .single();
+
+      let inviterName = 'Bir arkadaşın';
+      if (member.invited_by) {
+        const { data: inviterProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', member.invited_by)
+          .single();
+        if (inviterProfile) inviterName = inviterProfile.username;
+      }
+
+      if (group) {
+        showGroupInviteModal(member, group, inviterName);
+      }
+    })
+    .subscribe();
+}
+
+function showGroupInviteModal(member, group, inviterName) {
+  document.getElementById('group-invite-avatar').textContent = group.name.charAt(0).toUpperCase();
+  document.getElementById('group-invite-name').textContent = group.name;
+  document.getElementById('group-invite-text').textContent = inviterName + ' seni bu gruba davet etti';
+
+  document.getElementById('group-invite-incoming-modal').classList.remove('hidden');
+
+  document.getElementById('group-invite-accept-btn').onclick = async () => {
+    await supabase
+      .from('group_members')
+      .update({ status: 'accepted' })
+      .eq('group_id', member.group_id)
+      .eq('user_id', currentUser.id);
+
+    document.getElementById('group-invite-incoming-modal').classList.add('hidden');
+    loadGroupsData();
+  };
+
+  document.getElementById('group-invite-decline-btn').onclick = async () => {
+    await supabase
+      .from('group_members')
+      .update({ status: 'declined' })
+      .eq('group_id', member.group_id)
+      .eq('user_id', currentUser.id);
+
+    document.getElementById('group-invite-incoming-modal').classList.add('hidden');
+  };
+}
+
 // ===== ARAMA MANTIGI =====
 
-// Telefon ikonuna tıkla → Arama başlat
 document.getElementById('chat-call-btn').addEventListener('click', async () => {
   if (!activeChatFriend || !currentUser) return;
 
-  // Arama isteği oluştur
   const { error } = await supabase
     .from('calls')
     .insert({
@@ -720,13 +1252,11 @@ document.getElementById('chat-call-btn').addEventListener('click', async () => {
       receiver_id: activeChatFriend.id,
       status: 'pending'
     };
-    // Arama başladığını göster
     showActiveCallScreen();
     setCallConnecting(true);
   }
 });
 
-// Gelen aramaları dinle
 function subscribeToIncomingCalls() {
   if (!currentUser) return;
 
@@ -734,8 +1264,7 @@ function subscribeToIncomingCalls() {
     .channel('calls-' + currentUser.id)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calls' }, (payload) => {
       const call = payload.new;
-      
-      // Eğer bana gelen arama ise
+
       if (call.receiver_id === currentUser.id && call.status === 'pending') {
         showIncomingCallModal(call);
       }
@@ -743,13 +1272,11 @@ function subscribeToIncomingCalls() {
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls' }, (payload) => {
       const call = payload.new;
 
-      // Eğer arama kabul edilirse
       if (activeCall && call.caller_id === activeCall.caller_id && call.receiver_id === activeCall.receiver_id && call.status === 'active') {
         activeCall = call;
         setCallConnected();
       }
 
-      // Eğer arama reddedilirse veya biterse
       if (activeCall && call.caller_id === activeCall.caller_id && call.receiver_id === activeCall.receiver_id && (call.status === 'declined' || call.status === 'ended')) {
         endCall();
       }
@@ -762,7 +1289,6 @@ function subscribeToIncomingCalls() {
     .subscribe();
 }
 
-// Gelen arama modal'ını göster
 async function showIncomingCallModal(call) {
   const { data: callerProfile } = await supabase
     .from('profiles')
@@ -779,7 +1305,6 @@ async function showIncomingCallModal(call) {
   document.getElementById('call-modal').classList.remove('hidden');
   startIncomingRingtone();
 
-  // Kabul Et butonu
   document.getElementById('call-accept-btn').onclick = async () => {
     await supabase
       .from('calls')
@@ -793,7 +1318,6 @@ async function showIncomingCallModal(call) {
     setCallConnected();
   };
 
-  // Reddet butonu
   document.getElementById('call-decline-btn').onclick = async () => {
     await supabase
       .from('calls')
@@ -807,13 +1331,16 @@ async function showIncomingCallModal(call) {
   };
 }
 
-// Aktif arama ekranını göster
 function showActiveCallScreen(displayUser) {
   document.getElementById('chat-area').classList.add('hidden');
   document.getElementById('call-area').classList.remove('hidden');
 
-  micMuted = false;
-  document.getElementById('call-mute-btn').classList.remove('muted');
+  micMuted = globalMicOff;
+  document.getElementById('call-mute-btn').classList.toggle('muted', micMuted);
+
+  const remoteAudio = document.getElementById('remote-audio');
+  remoteAudio.muted = globalSpeakerOff;
+
   document.getElementById('call-remote-mute').classList.add('hidden');
   closeAllDeviceMenus();
 
@@ -821,11 +1348,9 @@ function showActiveCallScreen(displayUser) {
   document.getElementById('call-name').textContent = username;
   document.getElementById('call-avatar-large').textContent = username.charAt(0).toUpperCase();
 
-  // Arama sona erdir butonu
   document.getElementById('call-end-btn').onclick = endCall;
 }
 
-// Arama süresi sayacını başlat
 function startCallTimer() {
   callSeconds = 0;
   const timerEl = document.getElementById('call-timer');
@@ -844,7 +1369,6 @@ function startCallTimer() {
   }, 1000);
 }
 
-// Arama süresi sayacını durdur
 function stopCallTimer() {
   if (callTimerInterval) {
     clearInterval(callTimerInterval);
@@ -854,7 +1378,6 @@ function stopCallTimer() {
   document.getElementById('call-timer').classList.add('hidden');
 }
 
-// Aramayı sonlandır
 async function endCall() {
   stopAllRingtones();
   await stopWebRTC();
@@ -879,7 +1402,6 @@ async function endCall() {
 
 // ===== MESAJ MANTIGI =====
 
-// Mesajları yükle
 async function loadMessages() {
   if (!currentUser || !activeChatFriend) return;
 
@@ -904,7 +1426,6 @@ async function loadMessages() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Tek bir mesajı ekrana ekle
 function appendMessageToChat(msg) {
   const chatMessages = document.getElementById('chat-messages');
   const bubble = document.createElement('div');
@@ -913,7 +1434,6 @@ function appendMessageToChat(msg) {
   chatMessages.appendChild(bubble);
 }
 
-// Gerçek zamanlı mesaj dinleme
 function subscribeToMessages() {
   if (activeChatSubscription) {
     supabase.removeChannel(activeChatSubscription);
@@ -938,7 +1458,6 @@ function subscribeToMessages() {
     .subscribe();
 }
 
-// Mesaj gönder
 document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
 document.getElementById('chat-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -964,3 +1483,449 @@ async function sendMessage() {
     input.value = '';
   }
 }
+
+// ===== GRUP AYARLARI VE ARAMASI =====
+
+document.getElementById('group-call-btn').addEventListener('click', async () => {
+  if (!activeGroup || !currentUser) return;
+  startGroupCall();
+});
+
+document.getElementById('group-settings-btn').addEventListener('click', () => {
+  if (!activeGroup) return;
+
+  const isOwner = activeGroup.myRole === 'owner';
+  const isMod = activeGroup.myRole === 'moderator';
+  const canEdit = isOwner || isMod;
+
+  document.getElementById('edit-group-name-input').value = activeGroup.name;
+  document.getElementById('edit-group-name-input').disabled = !canEdit;
+  document.getElementById('edit-group-logo-btn').disabled = !canEdit;
+  document.getElementById('save-group-settings-btn').style.display = canEdit ? '' : 'none';
+  document.getElementById('group-settings-message').textContent = canEdit ? '' : 'Ayarları yalnızca grup sahibi ve yetkililer değiştirebilir.';
+  document.getElementById('group-settings-message').className = canEdit ? 'message' : 'message error';
+
+  const logoPreview = document.getElementById('group-logo-preview');
+  if (activeGroup.logo_url) {
+    logoPreview.innerHTML = `<img src="${activeGroup.logo_url}" alt="Logo">`;
+  } else {
+    logoPreview.innerHTML = activeGroup.name.charAt(0).toUpperCase();
+  }
+
+  renderGroupSettingsMembers();
+  document.getElementById('group-settings-modal').classList.remove('hidden');
+});
+
+document.getElementById('cancel-group-settings-btn').addEventListener('click', () => {
+  document.getElementById('group-settings-modal').classList.add('hidden');
+});
+
+document.getElementById('save-group-settings-btn').addEventListener('click', async () => {
+  if (!activeGroup || !currentUser) return;
+
+  const newName = document.getElementById('edit-group-name-input').value.trim();
+  const messageDiv = document.getElementById('group-settings-message');
+
+  messageDiv.textContent = '';
+  messageDiv.className = 'message';
+
+  if (!newName) {
+    messageDiv.textContent = 'Grup adı boş olamaz.';
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('groups')
+    .update({ name: newName })
+    .eq('id', activeGroup.id);
+
+  if (error) {
+    messageDiv.textContent = 'Hata: ' + error.message;
+    messageDiv.classList.add('error');
+    return;
+  }
+
+  messageDiv.textContent = 'Grup bilgileri güncellendi!';
+  messageDiv.classList.add('success');
+
+  activeGroup.name = newName;
+  document.getElementById('group-chat-name').textContent = newName;
+
+  if (!activeGroup.logo_url) {
+    document.getElementById('group-chat-avatar').textContent = newName.charAt(0).toUpperCase();
+  }
+
+  loadGroupsData();
+
+  setTimeout(() => {
+    document.getElementById('group-settings-modal').classList.add('hidden');
+  }, 1000);
+});
+
+document.getElementById('leave-group-btn').addEventListener('click', () => {
+  if (!activeGroup || !currentUser) return;
+  document.getElementById('leave-group-confirm-modal').classList.remove('hidden');
+});
+
+document.getElementById('cancel-leave-group-btn').addEventListener('click', () => {
+  document.getElementById('leave-group-confirm-modal').classList.add('hidden');
+});
+
+document.getElementById('confirm-leave-group-btn').addEventListener('click', async () => {
+  if (!activeGroup || !currentUser) return;
+
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', activeGroup.id)
+    .eq('user_id', currentUser.id);
+
+  if (!error) {
+    document.getElementById('leave-group-confirm-modal').classList.add('hidden');
+    document.getElementById('group-settings-modal').classList.add('hidden');
+    document.getElementById('group-chat-area').classList.add('hidden');
+    document.getElementById('friends-area').classList.remove('hidden');
+    activeGroup = null;
+    loadGroupsData();
+  } else {
+    alert('Ayrılırken hata oluştu: ' + error.message);
+  }
+});
+
+// ===== LOGO DEĞİŞTİRME =====
+
+document.getElementById('edit-group-logo-btn').addEventListener('click', () => {
+  document.getElementById('group-logo-file-input').click();
+});
+
+document.getElementById('group-logo-file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeGroup) return;
+
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const base64 = ev.target.result;
+
+    const { error } = await supabase
+      .from('groups')
+      .update({ logo_url: base64 })
+      .eq('id', activeGroup.id);
+
+    if (error) {
+      alert('Logo kaydedilemedi: ' + error.message);
+      return;
+    }
+
+    activeGroup.logo_url = base64;
+
+    const logoPreview = document.getElementById('group-logo-preview');
+    logoPreview.innerHTML = `<img src="${base64}" alt="Logo">`;
+
+    const chatAvatar = document.getElementById('group-chat-avatar');
+    chatAvatar.innerHTML = `<img src="${base64}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+
+    document.querySelectorAll('.server-group-icon').forEach(el => {
+      if (el.getAttribute('data-tooltip') === activeGroup.name) {
+        el.innerHTML = `<img src="${base64}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+      }
+    });
+
+    e.target.value = '';
+  };
+  reader.readAsDataURL(file);
+});
+
+async function renderGroupSettingsMembers() {
+  const listEl = document.getElementById('group-settings-member-list');
+  listEl.innerHTML = '<div class="empty-list">Yükleniyor...</div>';
+
+  if (!activeGroup || !currentUser) return;
+
+  const isOwner = activeGroup.myRole === 'owner';
+
+  const { data: members, error } = await supabase
+    .from('group_members')
+    .select('user_id, role, profiles:user_id(username)')
+    .eq('group_id', activeGroup.id)
+    .eq('status', 'accepted');
+
+  if (error || !members) {
+    console.error("Üye yükleme hatası:", error);
+    listEl.innerHTML = '<div class="empty-list">Üyeler yüklenemedi.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+
+  members.forEach(m => {
+    const isMe = m.user_id === currentUser.id;
+    const username = m.profiles ? m.profiles.username : 'Bilinmeyen';
+    const memberRole = m.role || 'member';
+
+    const item = document.createElement('div');
+    item.className = 'premium-member-item';
+
+    const info = document.createElement('div');
+    info.className = 'premium-member-info';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'premium-member-avatar';
+    avatar.textContent = username.charAt(0).toUpperCase();
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = username + (isMe ? ' (Sen)' : '');
+
+    if (memberRole === 'owner') {
+      const badge = document.createElement('span');
+      badge.className = 'role-badge admin';
+      badge.textContent = 'Sahip';
+      nameSpan.appendChild(badge);
+    } else if (memberRole === 'moderator') {
+      const badge = document.createElement('span');
+      badge.className = 'role-badge moderator';
+      badge.textContent = 'Yetkili';
+      nameSpan.appendChild(badge);
+    }
+
+    info.appendChild(avatar);
+    info.appendChild(nameSpan);
+    item.appendChild(info);
+
+    // Sadece sahip, kendisi olmayan ve owner olmayan üyelere sağ tık menüsü açabilir
+    if (isOwner && !isMe && memberRole !== 'owner') {
+      item.style.cursor = 'context-menu';
+      item.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        currentContextMember = { user_id: m.user_id, username: username, role: memberRole };
+        currentContextItem = item;
+
+        const promoteBtn = document.getElementById('context-promote-btn');
+        if (memberRole === 'moderator') {
+          promoteBtn.textContent = '⬇️ Yetkiyi Al';
+        } else {
+          promoteBtn.textContent = '⭐ Grup Yetkilisi Yap';
+        }
+
+        const menu = document.getElementById('custom-context-menu');
+        menu.classList.remove('hidden');
+        menu.style.left = e.pageX + 'px';
+        menu.style.top = e.pageY + 'px';
+      });
+    }
+
+    listEl.appendChild(item);
+  });
+}
+
+// ===== SAĞ TIK MENÜSÜ İŞLEMLERİ =====
+
+let currentContextMember = null;
+let currentContextItem = null;
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('custom-context-menu');
+  if (menu) menu.classList.add('hidden');
+});
+
+document.getElementById('context-promote-btn').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  document.getElementById('custom-context-menu').classList.add('hidden');
+  if (!currentContextMember || !activeGroup) return;
+
+  const newRole = currentContextMember.role === 'moderator' ? 'member' : 'moderator';
+  const actionText = newRole === 'moderator' ? 'yetkili yapmak' : 'yetkisini almak';
+
+  const confirm1 = confirm(`${currentContextMember.username} adlı kullanıcıyı ${actionText} istediğine emin misin?`);
+  if (!confirm1) return;
+
+  const { error } = await supabase
+    .from('group_members')
+    .update({ role: newRole })
+    .eq('group_id', activeGroup.id)
+    .eq('user_id', currentContextMember.user_id);
+
+  if (!error) {
+    renderGroupSettingsMembers();
+  } else {
+    alert('İşlem başarısız: ' + error.message);
+  }
+});
+
+document.getElementById('context-kick-btn').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  document.getElementById('custom-context-menu').classList.add('hidden');
+
+  if (!currentContextMember || !activeGroup) return;
+
+  const confirmKick = confirm(currentContextMember.username + ' adlı kullanıcıyı gruptan çıkarmak istediğine emin misin?');
+  if (!confirmKick) return;
+
+  const { error: kickErr } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', activeGroup.id)
+    .eq('user_id', currentContextMember.user_id);
+
+  if (!kickErr) {
+    if (currentContextItem) currentContextItem.remove();
+  } else {
+    alert('Çıkarılırken hata: ' + kickErr.message);
+  }
+});
+
+// ===== GRUP SESLİ ARAMA =====
+
+async function startGroupCall() {
+  if (!activeGroup || !currentUser) return;
+
+  const { data: call, error } = await supabase
+    .from('group_calls')
+    .insert({ group_id: activeGroup.id, started_by: currentUser.id, status: 'active' })
+    .select()
+    .single();
+
+  if (error) {
+    alert('Arama başlatılamadı: ' + error.message);
+    return;
+  }
+
+  activeGroupCallId = call.id;
+  openGroupCallModal(activeGroup, currentUser.id);
+  subscribeToGroupCall(call.id);
+}
+
+function openGroupCallModal(group, starterId) {
+  const modal = document.getElementById('group-call-modal');
+  document.getElementById('group-call-group-name').textContent = group.name;
+  document.getElementById('group-call-status').textContent = 'Aranıyor...';
+
+  const avatar = document.getElementById('group-call-avatar');
+  if (group.logo_url) {
+    avatar.innerHTML = `<img src="${group.logo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    avatar.textContent = group.name.charAt(0).toUpperCase();
+  }
+
+  document.getElementById('group-call-participant-list').innerHTML = '';
+  addParticipantToCallUI(currentUser.id, 'Sen');
+
+  modal.classList.remove('hidden');
+}
+
+function addParticipantToCallUI(userId, username) {
+  const list = document.getElementById('group-call-participant-list');
+
+  if (document.getElementById('gcp-' + userId)) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'group-call-participant';
+  wrap.id = 'gcp-' + userId;
+
+  const av = document.createElement('div');
+  av.className = 'group-call-participant-avatar';
+  av.textContent = (username || '?').charAt(0).toUpperCase();
+
+  const name = document.createElement('div');
+  name.className = 'group-call-participant-name';
+  name.textContent = username || 'Kullanıcı';
+
+  wrap.appendChild(av);
+  wrap.appendChild(name);
+  list.appendChild(wrap);
+
+  const count = list.children.length;
+  document.getElementById('group-call-status').textContent = count + ' kişi aramada';
+}
+
+function removeParticipantFromCallUI(userId) {
+  const el = document.getElementById('gcp-' + userId);
+  if (el) el.remove();
+  const count = document.getElementById('group-call-participant-list').children.length;
+  document.getElementById('group-call-status').textContent = count + ' kişi aramada';
+}
+
+function subscribeToGroupCall(callId) {
+  if (groupCallSubscription) supabase.removeChannel(groupCallSubscription);
+
+  groupCallSubscription = supabase
+    .channel('group-call-' + callId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_calls', filter: `id=eq.${callId}` }, (payload) => {
+      if (payload.new.status === 'ended') {
+        endGroupCallUI();
+      }
+    })
+    .subscribe();
+}
+
+function subscribeToGroupCallNotifications() {
+  if (!currentUser) return;
+
+  supabase
+    .channel('group-call-notifications-' + currentUser.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_calls' }, async (payload) => {
+      const call = payload.new;
+      if (call.started_by === currentUser.id) return;
+
+      const myGroupIds = userGroups.map(g => g.id);
+      if (!myGroupIds.includes(call.group_id)) return;
+
+      const group = userGroups.find(g => g.id === call.group_id);
+      if (!group) return;
+
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', call.started_by)
+        .single();
+
+      const callerName = callerProfile ? callerProfile.username : 'Biri';
+
+      document.getElementById('group-call-incoming-avatar').textContent = group.name.charAt(0).toUpperCase();
+      document.getElementById('group-call-incoming-group-name').textContent = group.name;
+      document.getElementById('group-call-incoming-caller').textContent = callerName + ' grup araması başlattı';
+      document.getElementById('group-call-incoming-modal').classList.remove('hidden');
+
+      document.getElementById('group-call-join-btn').onclick = () => {
+        document.getElementById('group-call-incoming-modal').classList.add('hidden');
+        activeGroupCallId = call.id;
+        activeGroup = group;
+        openGroupCallModal(group, call.started_by);
+        subscribeToGroupCall(call.id);
+      };
+
+      document.getElementById('group-call-decline-btn').onclick = () => {
+        document.getElementById('group-call-incoming-modal').classList.add('hidden');
+      };
+    })
+    .subscribe();
+}
+
+function endGroupCallUI() {
+  document.getElementById('group-call-modal').classList.add('hidden');
+  document.getElementById('group-call-participant-list').innerHTML = '';
+  activeGroupCallId = null;
+  groupCallMuted = false;
+  document.getElementById('group-call-mute-btn').textContent = '🎤';
+  if (groupCallSubscription) {
+    supabase.removeChannel(groupCallSubscription);
+    groupCallSubscription = null;
+  }
+}
+
+document.getElementById('group-call-end-btn').addEventListener('click', async () => {
+  if (!activeGroupCallId) { endGroupCallUI(); return; }
+
+  await supabase
+    .from('group_calls')
+    .update({ status: 'ended' })
+    .eq('id', activeGroupCallId);
+
+  endGroupCallUI();
+});
+
+document.getElementById('group-call-mute-btn').addEventListener('click', () => {
+  groupCallMuted = !groupCallMuted;
+  document.getElementById('group-call-mute-btn').textContent = groupCallMuted ? '🔇' : '🎤';
+  document.getElementById('group-call-mute-btn').classList.toggle('muted', groupCallMuted);
+});

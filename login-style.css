@@ -104,3 +104,10 @@ body {
 .message.success {
   color: #23a55a;
 }
+
+.verify-text {
+  font-size: 14px;
+  color: #8b8a87;
+  text-align: center;
+  line-height: 1.5;
+}

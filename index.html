@@ -37,6 +37,15 @@
           <path d="M 45 52 Q 50 50 55 52" stroke="#1a1a2e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
+
+      <!-- Grup Oluştur Butonu -->
+      <div class="add-group-btn" id="add-group-btn" title="Grup Oluştur">+</div>
+
+      <!-- Küçük Çizgi -->
+      <div class="server-separator"></div>
+
+      <!-- Sol şeritte grup ikonları -->
+      <div id="server-group-list"></div>
     </div>
 
     <!-- Sol panel: Direkt Mesajlar listesi -->
@@ -124,6 +133,127 @@
 
     </div>
 
+    <!-- Ana içerik alanı: Grup Sohbet görünümü -->
+    <div class="main-content hidden" id="group-chat-area">
+
+      <div class="content-header chat-header">
+        <div class="chat-header-left">
+          <div class="back-btn" id="back-to-friends-from-group" title="Arkadaşlara dön">←</div>
+          <div class="chat-avatar" id="group-chat-avatar">?</div>
+          <span class="header-title" id="group-chat-name">Grup</span>
+        </div>
+        <div class="chat-header-right">
+          <div class="control-icon" id="group-invite-btn" title="Arkadaş Davet Et">➕</div>
+          <div class="control-icon" id="group-call-btn" title="Grup Araması Başlat">📞</div>
+          <div class="control-icon" id="group-settings-btn" title="Grup Ayarları">⚙️</div>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="group-chat-messages"></div>
+
+      <div class="message-input-container">
+        <input type="text" id="group-chat-input" class="message-input" placeholder="Mesaj yaz...">
+        <button id="group-chat-send-btn" class="message-send-btn">Gönder</button>
+      </div>
+
+    </div>
+
+    <!-- Grup Oluştur Modal'ı -->
+    <div class="simple-modal hidden" id="create-group-modal">
+      <div class="simple-modal-content">
+        <div class="simple-modal-title">Grup Oluştur</div>
+        <input type="text" id="group-name-input" class="login-input" placeholder="Grup adı">
+        <input type="number" id="group-limit-input" class="login-input" placeholder="Üye sınırı (0 = sınırsız)" min="0" value="0">
+        <div class="simple-modal-buttons">
+          <button class="nav-btn btn-skip" id="cancel-group-btn">Vazgeç</button>
+          <button class="nav-btn btn-next" id="confirm-create-group-btn">Oluştur</button>
+        </div>
+        <div class="message" id="create-group-message"></div>
+      </div>
+    </div>
+
+    <!-- Arkadaş Davet Modal'ı -->
+    <div class="simple-modal hidden" id="invite-friend-modal">
+      <div class="simple-modal-content">
+        <div class="simple-modal-title">Gruba Arkadaş Davet Et</div>
+        <div id="invite-friend-list" class="invite-friend-list"></div>
+        <div class="simple-modal-buttons">
+          <button class="nav-btn btn-skip" id="close-invite-modal-btn">Kapat</button>
+        </div>
+        <div class="message" id="invite-friend-message"></div>
+      </div>
+    </div>
+
+    <!-- Premium Grup Ayarları Modal'ı -->
+    <div class="premium-modal hidden" id="group-settings-modal">
+      <div class="premium-modal-content">
+        <div class="premium-modal-header">
+          <div class="premium-modal-title">Grup Ayarları</div>
+          <div class="premium-modal-subtitle" id="group-settings-role-note">Grubunuzun detaylarını özelleştirin</div>
+        </div>
+
+        <div class="premium-input-group">
+          <label>Grup Adı 📝</label>
+          <input type="text" id="edit-group-name-input" class="premium-input" placeholder="Örn: Cümbüş Ailesi">
+        </div>
+
+        <div class="premium-logo-row">
+          <div class="premium-logo-preview" id="group-logo-preview">?</div>
+          <button class="premium-btn-secondary" id="edit-group-logo-btn">Logoyu Değiştir</button>
+          <input type="file" id="group-logo-file-input" accept="image/png, image/jpeg" style="display: none;">
+        </div>
+
+        <div class="premium-input-group" style="margin-top: 8px;">
+          <label>Grup Üyeleri 👥</label>
+          <div id="group-settings-member-list" class="premium-member-list">
+            <div class="empty-list">Yükleniyor...</div>
+          </div>
+        </div>
+
+        <div class="premium-danger-zone">
+          <div class="danger-zone-title">Tehlikeli İşlemler</div>
+          <button class="premium-btn-danger" id="leave-group-btn">Gruptan Ayrıl</button>
+        </div>
+
+        <div class="premium-modal-footer">
+          <button class="premium-btn-ghost" id="cancel-group-settings-btn">İptal</button>
+          <button class="premium-btn-primary" id="save-group-settings-btn">Kaydet</button>
+        </div>
+
+        <div class="message" id="group-settings-message"></div>
+      </div>
+    </div>
+
+    <!-- Gruptan Ayrıl Onay Modal'ı -->
+    <div class="simple-modal hidden" id="leave-group-confirm-modal">
+      <div class="simple-modal-content leave-confirm-content">
+        <div class="leave-confirm-icon">😢</div>
+        <div class="simple-modal-title">Ayrılmak İstediğine Emin Misin?</div>
+        <div class="leave-confirm-text">
+          Bu gruptan ayrılırsan, sohbetlere ve gruba tekrar 
+          <span class="highlight-text">bir yönetici seni tekrar davet edene kadar</span> erişemezsin.
+        </div>
+        <div class="simple-modal-buttons">
+          <button class="nav-btn btn-skip" id="cancel-leave-group-btn">Vazgeç</button>
+          <button class="premium-btn-danger" id="confirm-leave-group-btn" style="margin: 0;">Evet, Ayrıl 👋</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gelen Grup Daveti Modal'ı -->
+    <div class="call-modal hidden" id="group-invite-incoming-modal">
+      <div class="call-modal-content">
+        <div class="call-modal-avatar" id="group-invite-avatar">G</div>
+        <div class="call-modal-name" id="group-invite-name">Grup</div>
+        <div class="call-modal-text" id="group-invite-text">Seni bir gruba davet etti</div>
+        
+        <div class="call-modal-buttons">
+          <button id="group-invite-accept-btn" class="call-accept">Katıl</button>
+          <button id="group-invite-decline-btn" class="call-decline">Reddet</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Gelen Arama Modal'ı -->
     <div class="call-modal hidden" id="call-modal">
       <div class="call-bg-image" id="call-modal-bg"></div>
@@ -181,6 +311,46 @@
         <button type="button" class="call-mini-btn" id="call-mute-btn" title="Sustur">🔇</button>
       </div>
 
+    </div>
+
+    <!-- Sağ Tık Menüsü (Context Menu) -->
+    <div id="custom-context-menu" class="hidden">
+      <button id="context-promote-btn" class="context-menu-item context-promote">⭐ Grup Yetkilisi Yap</button>
+      <button id="context-kick-btn" class="context-menu-item context-kick">🚫 Gruptan At</button>
+    </div>
+
+    <!-- Grup Sesli Arama Modalı -->
+    <div class="call-modal hidden" id="group-call-modal">
+      <div class="call-modal-content group-call-content">
+        <div class="group-call-header">
+          <div class="call-modal-avatar" id="group-call-avatar">?</div>
+          <div class="call-modal-name" id="group-call-group-name">Grup Araması</div>
+          <div class="group-call-status" id="group-call-status">Aranıyor...</div>
+        </div>
+        <div class="group-call-participants">
+          <div class="group-call-participants-label">Katılanlar</div>
+          <div id="group-call-participant-list" class="group-call-participant-list"></div>
+        </div>
+        <div class="call-modal-buttons">
+          <button id="group-call-end-btn" class="call-decline">📞 Bitir</button>
+        </div>
+        <div class="call-mini-controls" style="justify-content:center; margin-top:8px;">
+          <button type="button" class="call-mini-btn" id="group-call-mute-btn" title="Sustur">🎤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gelen Grup Sesli Arama Bildirimi -->
+    <div class="call-modal hidden" id="group-call-incoming-modal">
+      <div class="call-modal-content">
+        <div class="call-modal-avatar" id="group-call-incoming-avatar">?</div>
+        <div class="call-modal-name" id="group-call-incoming-group-name">Grup</div>
+        <div class="call-modal-text" id="group-call-incoming-caller">birisi grup araması başlattı</div>
+        <div class="call-modal-buttons">
+          <button id="group-call-join-btn" class="call-accept">Katıl</button>
+          <button id="group-call-decline-btn" class="call-decline">Reddet</button>
+        </div>
+      </div>
     </div>
 
     <!-- Ringtone sesleri (gizli) -->
