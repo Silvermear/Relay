@@ -1,6 +1,6 @@
 {
   "name": "cumbus",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -17,6 +17,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "@shiguredo/rnnoise-wasm": "^2025.1.5",
     "@supabase/supabase-js": "^2.108.2",
     "electron-updater": "^6.8.9"
   },

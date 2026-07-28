@@ -1,6 +1,8 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1000,
@@ -19,16 +21,41 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
-  autoUpdater.checkForUpdatesAndNotify();
+
+  console.log('🚀 Cümbüş açıldı.');
+  console.log('🔍 Güncelleme kontrolü başlatılıyor...');
+
+  autoUpdater.checkForUpdates();
+});
+
+// Güncelleme kontrolü başladı
+autoUpdater.on('checking-for-update', () => {
+  console.log('🔍 Güncelleme kontrol ediliyor...');
 });
 
 // Güncelleme bulunduğunda
-autoUpdater.on('update-available', () => {
-  console.log('Yeni güncelleme bulundu, indiriliyor...');
+autoUpdater.on('update-available', (info) => {
+  console.log('🆕 Yeni güncelleme bulundu!');
+  console.log(info);
+});
+
+// Güncelleme bulunamadığında
+autoUpdater.on('update-not-available', (info) => {
+  console.log('✅ Güncelleme bulunamadı.');
+  console.log(info);
+});
+
+// İndirme ilerlemesi
+autoUpdater.on('download-progress', (progress) => {
+  console.log(
+    `📥 İndiriliyor: ${progress.percent.toFixed(1)}% (${Math.round(progress.transferred / 1024 / 1024)} MB / ${Math.round(progress.total / 1024 / 1024)} MB)`
+  );
 });
 
 // Güncelleme indirildiğinde, kullanıcıya sor
 autoUpdater.on('update-downloaded', () => {
+  console.log('✅ Güncelleme indirildi.');
+
   dialog.showMessageBox({
     type: 'info',
     title: 'Güncelleme Hazır',
@@ -43,5 +70,6 @@ autoUpdater.on('update-downloaded', () => {
 
 // Hata durumunda (internet yoksa vs.)
 autoUpdater.on('error', (error) => {
-  console.log('Güncelleme kontrolü hatası:', error);
+  console.log('❌ Güncelleme kontrolü hatası:');
+  console.log(error);
 });

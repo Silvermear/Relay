@@ -1,5 +1,20 @@
 const supabase = require('./supabase.js');
 
+// ==========================================
+// OTOMATİK GİRİŞ & OTURUM KONTROLÜ
+// ==========================================
+// Sayfa yüklendiğinde veya oturum durumu değiştiğinde çalışır
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session && session.user) {
+    if (session.user.email_confirmed_at) {
+      const p = window.location.pathname;
+      if (p.includes('auth.html') || p.includes('login.html') || p.endsWith('/')) {
+        window.location.href = 'index.html';
+      }
+    }
+  }
+});
+
 // Sekmeler arası geçiş
 const formTabs = document.querySelectorAll('.form-tab');
 const formPanels = document.querySelectorAll('.form-panel');
