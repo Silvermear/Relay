@@ -1,4 +1,4 @@
-Cümbüş — Özel Ses ve Arka Plan
+Relay — Özel Ses ve Arka Plan
 
 1) Zil sesi (ringtone)
    - Kendi ses dosyanı şuraya koy: assets/ringtone.mp3

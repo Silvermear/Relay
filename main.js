@@ -7,7 +7,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1000,
     height: 700,
-    title: 'Cümbüş',
+    title: 'Relay',
+    icon: 'icon.png',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
@@ -22,7 +23,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
-  console.log('🚀 Cümbüş açıldı.');
+  console.log('🚀 Relay açıldı.');
   console.log('🔍 Güncelleme kontrolü başlatılıyor...');
 
   autoUpdater.checkForUpdates();
@@ -59,7 +60,7 @@ autoUpdater.on('update-downloaded', () => {
   dialog.showMessageBox({
     type: 'info',
     title: 'Güncelleme Hazır',
-    message: 'Yeni bir Cümbüş güncellemesi indirildi. Şimdi yeniden başlatıp kurmak ister misin?',
+    message: 'Yeni bir Relay güncellemesi indirildi. Şimdi yeniden başlatıp kurmak ister misin?',
     buttons: ['Şimdi Yeniden Başlat', 'Daha Sonra']
   }).then((result) => {
     if (result.response === 0) {

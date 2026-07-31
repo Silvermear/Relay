@@ -95,14 +95,15 @@ body {
   transform: scale(1.05);
 }
 
-.cumbus-logo {
+.relay-logo {
   width: 48px;
   height: 48px;
+  border-radius: 14px;
   filter: drop-shadow(0 0 4px rgba(224, 164, 88, 0.2));
   transition: filter 0.2s ease;
 }
 
-.logo-container:hover .cumbus-logo {
+.logo-container:hover .relay-logo {
   filter: drop-shadow(0 0 8px rgba(224, 164, 88, 0.5));
 }
 

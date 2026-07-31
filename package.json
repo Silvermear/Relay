@@ -1,6 +1,6 @@
 {
-  "name": "cumbus",
-  "version": "1.1.0",
+  "name": "relay",
+  "version": "1.2.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -22,16 +22,16 @@
     "electron-updater": "^6.8.9"
   },
   "build": {
-    "appId": "com.cumbus.app",
-    "productName": "Cümbüş",
+    "appId": "com.relay.app",
+    "productName": "Relay",
     "publish": {
       "provider": "github",
       "owner": "Silvermear",
-      "repo": "cumbus-"
+      "repo": "relay"
     },
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "icon.png"
     },
     "nsis": {
       "oneClick": false,

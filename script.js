@@ -248,7 +248,7 @@ noiseSuppressionEnabled = userSettings.noiseSuppression;
 
 // ===== DURUM SİSTEMİ (AKTİF / BOŞTA / AFK) =====
 
-let userStatus = localStorage.getItem('cumbus_status') || 'online';
+let userStatus = localStorage.getItem('relay_status') || 'online';
 let _afkManual = false;
 let afkTimer = null;
 let lastActivity = Date.now();
@@ -260,7 +260,7 @@ function setStatus(status, manual) {
   if (status !== 'afk') _afkManual = false;
   else if (manual) _afkManual = true;
   userStatus = status;
-  localStorage.setItem('cumbus_status', status);
+  localStorage.setItem('relay_status', status);
   const icons = { online: '🟢', idle: '🟡', afk: '🔴' };
   const labels = { online: 'Aktif', idle: 'Boşta', afk: 'AFK' };
   statusBtn.textContent = icons[status] || '🟢';
@@ -377,7 +377,7 @@ function broadcastStatus() {
 
 function loadSettings() {
   try {
-    return JSON.parse(localStorage.getItem('cumbus_settings')) || getDefaultSettings();
+    return JSON.parse(localStorage.getItem('relay_settings')) || getDefaultSettings();
   } catch {
     return getDefaultSettings();
   }
@@ -400,7 +400,7 @@ function getDefaultSettings() {
 }
 
 function saveSettings() {
-  localStorage.setItem('cumbus_settings', JSON.stringify(userSettings));
+  localStorage.setItem('relay_settings', JSON.stringify(userSettings));
 }
 
 function getSettingsNavHtml() {
@@ -436,7 +436,7 @@ function getSettingsPageContent(category) {
 function renderAccountSettings() {
   const u = (currentUser && currentUser.username) ? currentUser : { username: 'Kullanıcı', id: '?' };
   const displayId = u.id !== '?' ? u.id.substring(0, 6).toUpperCase() : '------';
-  const savedAv = localStorage.getItem('cumbus_avatar');
+  const savedAv = localStorage.getItem('relay_avatar');
   return `
     <div class="settings-page-title">Hesabım</div>
     <div class="settings-page-desc">Hesap bilgilerini görüntüle ve düzenle</div>
@@ -474,7 +474,7 @@ function renderAccountSettings() {
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="settings-btn secondary" id="settings-avatar-btn">Resim Seç</button>
-          <button class="settings-btn secondary" id="settings-avatar-reset-btn" ${localStorage.getItem('cumbus_avatar') ? '' : 'disabled'}>Sıfırla</button>
+          <button class="settings-btn secondary" id="settings-avatar-reset-btn" ${localStorage.getItem('relay_avatar') ? '' : 'disabled'}>Sıfırla</button>
         </div>
       </div>
       <div style="font-size:11px;color:#6a6a72;margin-top:−4px">Fotoğraflar 512×512, JPEG %85 kaliteye otomatik düşürülür</div>
@@ -652,7 +652,7 @@ function renderAdvancedSettings() {
     <div class="settings-section">
       <div class="settings-section-title">Uygulama Hakkında</div>
       <div class="settings-info-box">
-        <strong>Cumbus</strong> — Gerçek zamanlı mesajlaşma ve sesli arama uygulaması<br>
+        <strong>Relay</strong> — Gerçek zamanlı mesajlaşma ve sesli arama uygulaması<br>
         <strong>Sürüm:</strong> 1.0.0<br>
         <strong>Altyapı:</strong> Supabase + WebRTC + RNNoise<br>
         <strong>Platform:</strong> Web / Electron
@@ -772,7 +772,7 @@ function attachSettingsEvents(category) {
         reader.readAsDataURL(file);
 
         function finishAvatar(dataUrl, origSize) {
-          try { localStorage.setItem('cumbus_avatar', dataUrl); } catch (_) { showToast('❌', 'Hata', 'Avatar çok büyük, kaydedilemedi'); return; }
+          try { localStorage.setItem('relay_avatar', dataUrl); } catch (_) { showToast('❌', 'Hata', 'Avatar çok büyük, kaydedilemedi'); return; }
           applyAvatar(dataUrl);
           saveAvatarToProfile(dataUrl);
           const prev = document.getElementById('settings-preview-avatar');
@@ -791,7 +791,7 @@ function attachSettingsEvents(category) {
     }
     if (avatarResetBtn) {
       avatarResetBtn.addEventListener('click', () => {
-        localStorage.removeItem('cumbus_avatar');
+        localStorage.removeItem('relay_avatar');
         applyAvatar(null);
         avatarResetBtn.disabled = true;
         supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUser.id).then(({ error }) => {
@@ -891,9 +891,9 @@ function attachSettingsEvents(category) {
     const cacheBtn = document.getElementById('settings-clear-cache-btn');
     if (cacheBtn) {
       cacheBtn.addEventListener('click', () => {
-        localStorage.removeItem('cumbus_logo');
-        localStorage.removeItem('cumbus_avatar');
-        localStorage.removeItem('cumbus_settings');
+        localStorage.removeItem('relay_logo');
+        localStorage.removeItem('relay_avatar');
+        localStorage.removeItem('relay_settings');
         applyAvatar(null);
         userSettings = getDefaultSettings();
         saveSettings();
@@ -1006,7 +1006,7 @@ function applyAvatar(dataUrl) {
 }
 
 // Avatar'ı başlangıçta yükle
-const savedAvatar = localStorage.getItem('cumbus_avatar');
+const savedAvatar = localStorage.getItem('relay_avatar');
 if (savedAvatar) applyAvatar(savedAvatar);
 
 // Ayarları aç/kapa
@@ -1023,7 +1023,7 @@ settingsNav.addEventListener('click', (e) => {
 
 function openSettings() {
   document.getElementById('settings-footer-name').textContent = currentUser?.username || 'Kullanıcı';
-  applyAvatar(localStorage.getItem('cumbus_avatar'));
+  applyAvatar(localStorage.getItem('relay_avatar'));
   renderSettingsPage(activeSettingsCategory);
   settingsOverlay.classList.remove('hidden');
 }
@@ -2313,7 +2313,7 @@ async function loadUserProfile() {
   if (profile) {
     document.getElementById('user-name').textContent = profile.username;
     // Önce localStorage (hızlı), yoksa Supabase'deki avatar_url'i dene
-    const localAv = localStorage.getItem('cumbus_avatar');
+    const localAv = localStorage.getItem('relay_avatar');
     if (localAv) {
       applyAvatar(localAv);
     } else if (profile.avatar_url) {
