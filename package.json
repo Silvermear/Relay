@@ -27,7 +27,7 @@
     "publish": {
       "provider": "github",
       "owner": "Silvermear",
-      "repo": "relay"
+      "repo": "Relay"
     },
     "win": {
       "target": "nsis",
