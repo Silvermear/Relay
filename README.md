@@ -1,13 +1,14 @@
 > [!WARNING]
-> **Windows SmartScreen / Güvenlik Duvarı Uyarısı Hakkında**
+> **Windows SmartScreen Uyarısı Hakkında**
 > 
-> Relay bağımsız bir açık kaynak projesi olduğu için Windows uygulamayı ilk açışınızda *"Windows bilgisayarınızı korudu"* uyarısı verebilir. 
+> Relay bağımsız bir proje olduğu için Windows ilk açılışta *"Windows bilgisayarınızı korudu"* uyarısı verebilir. 
 > 
 > **Nasıl Geçilir?:** 
-> 1. Ekrandaki **"Ek Bilgi" (More Info)** yazısına tıkla.
-> 2. Açılan alt kısımdan **"Yine de çalıştır" (Run anyway)** butonuna basarak uygulamaya giriş yapabilirsin. 
+> 1. Ekrandaki **"Ek Bilgi" (More Info)** yazısına tıklayın.
+> 2. Açılan butonlardan **"Yine de çalıştır" (Run anyway)** seçeneğini seçin.
 > 
-> *Uygulamamız tamamen güvenli, açık kaynaklıdır ve virüs içermez.*
+> 🛡️ **Güvenlik & VirusTotal:**
+> Uygulamamız tamamen güvenli ve açık kaynaklıdır. İsterseniz indirilen `.exe` dosyasını taratmak için **[VirusTotal](https://www.virustotal.com)** üzerinden kontrol edebilir veya projemizin kodlarını GitHub üzerinden inceleyebilirsiniz.
 
 
 # ⚡ Relay — Modern & Hafif Masaüstü Sohbet Uygulaması
