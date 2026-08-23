@@ -22,7 +22,8 @@
 
 Aşağıdaki bağlantıya tıklayarak en güncel sürümü doğrudan indirebilirsiniz:
 
-👉 [Relay v1.2.5 İndir (.exe)](https://github.com/Silvermear/Relay-App/releases/download/v1.2.5/Relay-1.2.5.exe)[![Downloads](https://img.shields.io/github/downloads/Silvermear/Relay/total?style=flat-square&color=8a2be2)](https://github.com/KullanıcıAdın/Relay/releases)
+👉 [Relay v1.2.5 İndir (.exe)](https://github.com/Silvermear/Relay-App/releases/download/v1.2.5/Relay-1.2.5.exe)
+[![Downloads](https://img.shields.io/github/downloads/KullanıcıAdın/Relay/total?style=for-the-badge&color=8a2be2)](https://github.com/KullanıcıAdın/Relay/releases)
 
 ---
 
