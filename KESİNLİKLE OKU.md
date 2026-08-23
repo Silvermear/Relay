@@ -1,5 +1,3 @@
-İşte GitHub'daki README'ye yapıştıracağın metin (kopyala, dosyanın en üstüne ekle):
-
 Relay
 Arkadaşlarınla sesli sohbet et, mesajlaş, grup kur. Basit, hızlı ve ücretsiz.
 
